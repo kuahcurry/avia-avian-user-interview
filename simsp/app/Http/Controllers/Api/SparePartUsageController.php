@@ -24,6 +24,7 @@ class SparePartUsageController extends Controller
 
         $sparePart = SparePart::findOrFail($validated['spare_part_id']);
 
+        // Cek awal sisa stok sebelum proses ke database
         if ($sparePart->current_stock < $validated['quantity_used'])
         {
             return response()->json([
@@ -31,8 +32,10 @@ class SparePartUsageController extends Controller
             ], 400);
         };
 
+        // Bungkus dalam DB transaction & lockForUpdate biar aman dari race condition kalau ada teknisi input barengan
         $usage = DB::transaction(function () use ($validated, $sparePart)
         {
+            // Kunci baris data spare part sampai transaksi selesai (pessimistic lock)
             $sparePart = SparePart::where('id', $validated['spare_part_id'])
                           ->lockForUpdate()
                           ->firstOrFail();
@@ -52,6 +55,7 @@ class SparePartUsageController extends Controller
             $sparePart->current_stock = $newStock;
             $sparePart->save();
 
+            // Catat log riwayat perubahan stok untuk audit trail pabrik
             StockHistory::create([
                 'spare_part_id'    => $validated['spare_part_id'],
                 'quantity_changed' => -$validated['quantity_used'],

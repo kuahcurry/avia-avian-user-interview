@@ -21,6 +21,7 @@ class SparePartController extends Controller
         if($request->filled('search')) {
             $search = $request->search;
 
+            // Bungkus closure agar grouping OR LIKE rapi dalam kurung dan gak tabrakan sama filter lain
             $query->where(function ($q) use ($search) {
                     $q->where('part_name', 'like', '%' . $search . '%')
                     ->orWhere('part_code', 'like', '%' . $search . '%');
@@ -38,6 +39,7 @@ class SparePartController extends Controller
         if($request->filled('status')) {
             $status = $request->status;
 
+            // Gunakan whereColumn karena status bukan kolom fisik, melainkan perbandingan 2 kolom
             if ($status === 'critical') {
                 $query->whereColumn('current_stock', '<=', 'minimum_stock');
             } elseif ($status === 'safe') {
